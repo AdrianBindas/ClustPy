@@ -8,7 +8,7 @@ import numpy as np
 from sklearn.base import BaseEstimator, ClusterMixin
 
 
-def _multi_density_dbscan(X: np.ndarray, k: int, var: float, min_cluster_size: int) -> (int, np.ndarray, list):
+def _multi_density_dbscan(X: np.ndarray, k: int, var: float, min_cluster_size: int, metric: str) -> (int, np.ndarray, list):
     """
     Start the actual Multiple Density DBSCAN clustering procedure on the input data set.
 
@@ -34,7 +34,7 @@ def _multi_density_dbscan(X: np.ndarray, k: int, var: float, min_cluster_size: i
     assert var >= 1, "var must be >= 1"
     assert min_cluster_size > 1, "min_cluster_size must be > 1"
     # Get k nearest neighbors and densities for each point
-    nearest_neighbors = NearestNeighbors(n_neighbors=k + 1).fit(X)
+    nearest_neighbors = NearestNeighbors(n_neighbors=k + 1, metric=metric).fit(X)
     densities, knns = nearest_neighbors.kneighbors(X, n_neighbors=k + 1)
     knns = knns[:, 1:]
     densities = np.mean(densities[:, 1:], axis=1)
@@ -198,6 +198,8 @@ class MultiDensityDBSCAN(BaseEstimator, ClusterMixin):
         The final labels
     cluster_densities_ : list
         The final cluster densities
+    metric : str
+        The metric to use when calculating density with nearest neighbors algorithm
 
     References
     ----------
@@ -205,10 +207,11 @@ class MultiDensityDBSCAN(BaseEstimator, ClusterMixin):
     International Conference on Intelligent Data Engineering and Automated Learning. Springer, Berlin, Heidelberg, 2011.
     """
 
-    def __init__(self, k: int = 15, var: float = 2.5, min_cluster_size: int = 2):
+    def __init__(self, k: int = 15, var: float = 2.5, min_cluster_size: int = 2, metric: str = 'euclidean'):
         self.k = k
         self.var = var
         self.min_cluster_size = min_cluster_size
+        self.metric = metric
 
     def fit(self, X: np.ndarray, y: np.ndarray = None) -> 'MultiDensityDBSCAN':
         """
@@ -227,7 +230,7 @@ class MultiDensityDBSCAN(BaseEstimator, ClusterMixin):
         self : MultiDensityDBSCAN
             this instance of the Multi Density DBSCAN algorithm
         """
-        n_clusters, labels, cluster_densities = _multi_density_dbscan(X, self.k, self.var, self.min_cluster_size)
+        n_clusters, labels, cluster_densities = _multi_density_dbscan(X, self.k, self.var, self.min_cluster_size, self.metric)
         self.n_clusters_ = n_clusters
         self.labels_ = labels
         self.cluster_densities_ = cluster_densities
